@@ -4,6 +4,7 @@ Only a separately approved, public-information CSV may be placed at
 public_partner_data/notices.csv. This app intentionally fails closed otherwise.
 """
 from datetime import date
+from html import escape
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -80,13 +81,31 @@ def main() -> None:
     if selected.empty:
         st.info("目前條件無符合資料。")
         return
-    selected["title_link"] = selected["official_url"].map(official_https_url)
-    # LinkColumn uses the URL as cell value; display_text shows the title only
-    # if the title can be extracted from the URL, so use a separate link column.
-    st.dataframe(
-        selected[COLUMNS].rename(columns=DISPLAY), hide_index=True,
-        use_container_width=True,
-        column_config={"官方公告": st.column_config.LinkColumn("開啟官方公告")},
+    # A Streamlit LinkColumn cannot use a different column as its link label.
+    # Render a safe HTML table so each tender's *actual title* is clickable.
+    headings = ["機關", "案號", "標案名稱", "採購類別", "預算（元）", "公告日", "公告狀態"]
+    rows_html = []
+    for item in selected.to_dict("records"):
+        url = official_https_url(item["official_url"])
+        title = escape(str(item["title"]))
+        title_html = (
+            f'<a href="{escape(url, quote=True)}" target="_blank" '
+            f'rel="noopener noreferrer">{title}</a>'
+            if url else title
+        )
+        cells = [
+            escape(str(item["agency"])), escape(str(item["case_no"])),
+            title_html, escape(str(item["category"])),
+            escape(str(item["budget"])), escape(str(item["announcement_date"])),
+            escape(str(item["status"])),
+        ]
+        rows_html.append("<tr>" + "".join(f"<td>{cell}</td>" for cell in cells) + "</tr>")
+    st.markdown(
+        '<div style="overflow-x:auto;max-height:650px;overflow-y:auto">'
+        '<table style="width:100%;border-collapse:collapse">'
+        '<thead><tr>' + "".join(f"<th>{escape(h)}</th>" for h in headings)
+        + '</tr></thead><tbody>' + "".join(rows_html) + '</tbody></table></div>',
+        unsafe_allow_html=True,
     )
     st.caption("公告內容及投標資格以政府電子採購網原文為準。資料不代表已逐案驗證。")
 
