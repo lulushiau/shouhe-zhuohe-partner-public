@@ -11,9 +11,9 @@ import pandas as pd
 import streamlit as st
 
 DATA_PATH = Path(__file__).resolve().parent / "public_partner_data" / "notices.csv"
-COLUMNS = ["title", "agency", "case_no", "budget", "announcement_date", "status", "official_url"]
+COLUMNS = ["title", "agency", "case_no", "budget", "announcement_date", "status", "official_url", "category"]
 DISPLAY = {"title": "標案名稱", "agency": "機關", "case_no": "案號", "budget": "預算（元）",
-           "announcement_date": "公告日", "status": "公告狀態", "official_url": "官方公告"}
+           "announcement_date": "公告日", "status": "公告狀態", "official_url": "官方公告", "category": "採購類別"}
 
 
 def official_https_url(value: object) -> str | None:
@@ -62,6 +62,7 @@ def main() -> None:
     first, last = st.columns(2)
     start = first.date_input("公告起日", value=date(2026, 1, 1))
     end = last.date_input("公告迄日", value=date.today())
+    category = st.radio("採購類別", ["全部", "工程標", "勞務標", "財物標"], horizontal=True)
     keyword = st.text_input("關鍵字（機關／案號／標案名稱）")
     if minimum > maximum or start > end:
         st.warning("請確認預算及日期上下限。")
@@ -70,6 +71,8 @@ def main() -> None:
         data["budget_number"].between(minimum, maximum)
         & data["date_value"].between(start, end)
     ].copy()
+    if category != "全部":
+        selected = selected.loc[selected["category"] == {"工程標": "工程類", "勞務標": "勞務類", "財物標": "財物類"}[category]]
     if keyword.strip():
         haystack = selected[["title", "agency", "case_no"]].agg(" ".join, axis=1)
         selected = selected.loc[haystack.str.contains(keyword.strip(), case=False, regex=False)]
