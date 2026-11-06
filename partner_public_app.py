@@ -45,9 +45,9 @@ def load_public_notices(path: Path = DATA_PATH) -> pd.DataFrame:
 
 
 def main() -> None:
-    st.set_page_config(page_title="首賀 × 卓賀｜合夥人公開標案查詢", page_icon="📋", layout="wide")
-    st.title("首賀 × 卓賀｜公開標案查詢")
-    st.caption("免登入・僅展示經核准公開的政府標案欄位；不包含公司內部資料或管理功能。")
+    st.set_page_config(page_title="首賀 × 卓賀｜公司標案資訊平台", page_icon="📋", layout="wide")
+    st.title("首賀 × 卓賀｜公司標案資訊平台")
+    st.caption("政府採購公告查詢｜工程、勞務及財物標案｜依官方公開清單整理（部分資料尚待逐案核實）")
     try:
         data = load_public_notices()
     except (OSError, ValueError) as exc:
