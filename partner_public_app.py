@@ -45,6 +45,24 @@ def load_public_notices(path: Path = DATA_PATH) -> pd.DataFrame:
     return frame
 
 
+def review_state(value: object) -> str:
+    """Conservative classification: unverified notices are never considered open."""
+    status = str(value).strip()
+    if not status or any(term in status for term in ("待核", "未核實", "待確認", "未知")):
+        return "狀態待核"
+    if any(term in status for term in ("已決標", "決標公告", "決標結果")):
+        return "已決標"
+    if any(term in status for term in ("未決標", "招標中", "公告招標", "公開招標")):
+        return "未決標"
+    return "狀態待核"
+
+
+def filter_review_state(data: pd.DataFrame, selected_state: str) -> pd.DataFrame:
+    if selected_state == "全部":
+        return data
+    return data.loc[data["status"].map(review_state) == selected_state].copy()
+
+
 def main() -> None:
     st.set_page_config(page_title="首賀 × 卓賀｜公司標案資訊平台", page_icon="📋", layout="wide")
     st.title("首賀 × 卓賀｜公司標案資訊平台")
@@ -64,6 +82,7 @@ def main() -> None:
     start = first.date_input("公告起日", value=date(2026, 1, 1))
     end = last.date_input("公告迄日", value=date.today())
     category = st.radio("採購類別", ["全部", "工程標", "勞務標", "財物標"], horizontal=True)
+    state = st.radio("決標狀態（未經逐案核實者不列入未決標）", ["全部", "未決標", "已決標", "狀態待核"], horizontal=True)
     keyword = st.text_input("關鍵字（機關／案號／標案名稱）")
     if minimum > maximum or start > end:
         st.warning("請確認預算及日期上下限。")
@@ -74,6 +93,7 @@ def main() -> None:
     ].copy()
     if category != "全部":
         selected = selected.loc[selected["category"] == {"工程標": "工程類", "勞務標": "勞務類", "財物標": "財物類"}[category]]
+    selected = filter_review_state(selected, state)
     if keyword.strip():
         haystack = selected[["title", "agency", "case_no"]].agg(" ".join, axis=1)
         selected = selected.loc[haystack.str.contains(keyword.strip(), case=False, regex=False)]
